@@ -1,0 +1,21 @@
+# install kubernetes on centos
+# 
+---
+- name: install kubernetes
+  hosts: kubernetes
+  sudo: True
+  tasks:
+    - name: add master to hosts file
+      lineinfile:
+        dest=/etc/hosts
+        state=present
+        regexp='centos-master'
+        line='{{ master_ip }}   centos-master'
+    - name: add minion to hosts file
+      lineinfile:
+        dest=/etc/hosts
+        state=present
+        regexp='centos-minion'
+        line='{{ minion_ip }}   centos-minion'
+    - name: check linux flavour
+      assert: { that: "ansible_os_family == 'RedHat'" }         
