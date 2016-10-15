@@ -1,10 +1,13 @@
 # install kubernetes on centos
-# 
+# http://kubernetes.io/docs/getting-started-guides/centos/centos_manual_config/ 
 ---
 - name: install kubernetes
   hosts: kubernetes
   sudo: True
+  
   tasks:
+    - name: check linux flavour
+      assert: { that: "ansible_os_family == 'RedHat'" }         
     - name: add master to hosts file
       lineinfile:
         dest=/etc/hosts
@@ -17,5 +20,42 @@
         state=present
         regexp='centos-minion'
         line='{{ minion_ip }}   centos-minion'
-    - name: check linux flavour
-      assert: { that: "ansible_os_family == 'RedHat'" }         
+    - name: add docker repo
+      copy: src=files/virt7-docker-common-release.repo dest=/etc/yum.repos.d/virt7-docker-common-release.repo
+    - name: install kub
+      yum: name=kubernetes,etcd state=present enablerepo=virt7-docker-common-release
+    - name: copy kubernetes config
+      copy: src=files/kubernetes-config dest=/etc/kubernetes/config backup=yes
+    - name: disable firewall
+      ignore_errors: yes
+      service: name={{ item }} enabled=no state=stopped
+      with_items:
+        - iptables
+        - firewalld
+      
+- name: master tasks
+  hosts: centos-master
+  sudo: True
+  tasks:
+    - name: copy etcd.conf
+      copy: src=files/etcd.conf dest=/etc/etcd/etcd.conf backup=yes
+      register: masteretcd
+    - name: copy apiserver
+      copy: src=files/apiserver dest=/etc/kubernetes/apiserver backup=yes
+      register: masterapiserver
+    - name: restart services
+      service: name={{ item }} state=restarted
+      with_items:
+        - etcd
+        - kube-apiserver
+        - kube-controller-manager
+        - kube-scheduler
+      when: masteretcd.changed or masterapiserver.changed
+    - name: enable services
+      service: name={{ item }} enabled=yes
+      with_items:
+        - etcd
+        - kube-apiserver
+        - kube-controller-manager
+        - kube-scheduler
+
