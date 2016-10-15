@@ -43,7 +43,7 @@
     - name: copy apiserver
       copy: src=files/apiserver dest=/etc/kubernetes/apiserver backup=yes
       register: masterapiserver
-    - name: restart services
+    - name: restart master services
       service: name={{ item }} state=restarted
       with_items:
         - etcd
@@ -51,7 +51,7 @@
         - kube-controller-manager
         - kube-scheduler
       when: masteretcd.changed or masterapiserver.changed
-    - name: enable services
+    - name: enable master services
       service: name={{ item }} enabled=yes
       with_items:
         - etcd
