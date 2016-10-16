@@ -59,3 +59,23 @@
         - kube-controller-manager
         - kube-scheduler
 
+- name: minion tasks
+  hosts: centos-minion
+  sudo: True
+  tasks:
+    - name: copy kubelet
+      copy: src=files/kubelet dest=/etc/kubernetes/kubelet backup=yes
+      register: minionkubelet
+    - name: restart minion services
+      service: name={{ item }} state=restarted
+      with_items:
+        - kube-proxy
+        - kubelet
+        - docker
+      when: minionkubelet.changed
+    - name: enable minion services
+      service: name={{ item }} enabled=yes
+      with_items:
+        - kube-proxy
+        - kubelet
+        - docker
